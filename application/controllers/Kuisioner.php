@@ -15,10 +15,14 @@ class kuisioner extends REST_Controller {
 		'jawaban' => $this->post('jawaban'),
 		'username' => $this->post('username')
 		);
-		if ($action==='post'){
+		if ($action==='postjawaban'){
 			$this->insertjawaban($data_kuisioner);
 		}else if ($action==='getid'){
 			$this->idkuisioner($data_kuisioner);
+		}else if ($action==='getuserkuisioner'){
+			$this->userkuisioner($data_kuisioner);
+		}else if ($action==='getuserpertanyaan'){
+			$this->userpertanyaan($data_kuisioner);
 		}else{
 			$this->response(array("status"=>"failed","message" => "action harus diisi"));
 		}
@@ -27,10 +31,31 @@ class kuisioner extends REST_Controller {
 	function idkuisioner($data_kuisioner){
 		if (empty($data_kuisioner['id_kuisioner'])){
 			$this->response(array('status' => "failed", "message"=>"Id kuisioner harus diisi"));
-		}
-		else{
+		}else{
 			$this->db->where('id_kuisioner', $data_kuisioner['id_kuisioner']);
             $get_kuisioner = $this->db->get('pertanyaan')->result();        
+			$this->response(array("status"=>"success","result" => $get_kuisioner));
+		}
+	}
+
+	function userkuisioner($data_kuisioner){
+		if (empty($data_kuisioner['username'])){
+			$this->response(array('status' => "failed", "message"=>"Username kuisioner harus diisi"));
+		}else{
+			$get_kuisioner = $this->db->query("SELECT p.id_kuisioner, p.nama_kuisioner, p.publish FROM kuisioner as p WHERE p.publish=1")->result();
+			$this->response(array("status"=>"success","result" => $get_kuisioner));
+		}
+	}
+
+	function userpertanyaan($data_kuisioner){
+		if (empty($data_kuisioner['username'])){
+			$this->response(array('status' => "failed", "message"=>"Username kuisioner harus diisi"));
+		}else if(empty($data_kuisioner['id_kuisioner'])){
+			$this->response(array('status' => "failed", "message"=>"id_kuisioner harus diisi"));		
+		}else{
+			$get_kuisioner = $this->db->query("SELECT `pertanyaan`.`id_kuisioner`, `pertanyaan`.`id_pertanyaan`, `pertanyaan`.`pertanyaan`, 1 as `status` FROM `pertanyaan` JOIN `jawaban` WHERE `jawaban`.`id_pertanyaan`=`pertanyaan`.`id_pertanyaan` AND `pertanyaan`.id_kuisioner=".$data_kuisioner['id_kuisioner']."
+				UNION
+				SELECT `pertanyaan`.`id_kuisioner`, `pertanyaan`.`id_pertanyaan`, `pertanyaan`.`pertanyaan`, 0 as `status` FROM `pertanyaan` JOIN `jawaban` WHERE `jawaban`.`id_pertanyaan`!=`pertanyaan`.`id_pertanyaan` AND `pertanyaan`.id_kuisioner=".$data_kuisioner['id_kuisioner'])->result();
 			$this->response(array("status"=>"success","result" => $get_kuisioner));
 		}
 	}
@@ -49,13 +74,13 @@ class kuisioner extends REST_Controller {
 			if(empty($get_jawaban_baseid)){
 				$insert= $this->db->query("INSERT INTO `jawaban` (`id_pertanyaan`, `jawaban`, `username`) VALUES ('".$data_jawaban['id_pertanyaan']."', '".$data_jawaban['jawaban']."', '".$data_jawaban['username']."')");
 				if ($insert){
-					$this->response(array('status'=>'success','result' => array($data_jawaban),"message"=>$insert));
+					$this->response(array('status'=>'success','result' => array($data_jawaban),"message"=>$insert));					
 				}
 			}else{
 				//jika photo di kosong atau tidak di update eksekusi query
-					$update= $this->db->query("Update jawaban Set jawaban ='".$data_transaksi['jawaban']."' Where id_pertanyaan ='".$data_transaksi['id_transaksi']."' AND username ='".$data_transaksi['username']."'");
+				$update= $this->db->query("Update jawaban Set jawaban ='".$data_jawaban['jawaban']."' Where id_pertanyaan ='".$data_jawaban['id_pertanyaan']."' AND username ='".$data_jawaban['username']."'");
 				if ($update){
-				$this->response(array('status'=>'success','result' => array($data_transaksi),"message"=>$update));
+					$this->response(array('status'=>'success','result' => array($data_jawaban),"message"=>$update));
 				}
 			}
 		}
