@@ -53,9 +53,24 @@ class kuisioner extends REST_Controller {
 		}else if(empty($data_kuisioner['id_kuisioner'])){
 			$this->response(array('status' => "failed", "message"=>"id_kuisioner harus diisi"));		
 		}else{
-			$get_kuisioner = $this->db->query("SELECT `pertanyaan`.`id_kuisioner`, `pertanyaan`.`id_pertanyaan`, `pertanyaan`.`pertanyaan`, 1 as `status` FROM `pertanyaan` JOIN `jawaban` WHERE `jawaban`.`id_pertanyaan`=`pertanyaan`.`id_pertanyaan` AND `pertanyaan`.id_kuisioner=".$data_kuisioner['id_kuisioner']."
-				UNION
-				SELECT `pertanyaan`.`id_kuisioner`, `pertanyaan`.`id_pertanyaan`, `pertanyaan`.`pertanyaan`, 0 as `status` FROM `pertanyaan` JOIN `jawaban` WHERE `jawaban`.`id_pertanyaan`!=`pertanyaan`.`id_pertanyaan` AND `pertanyaan`.id_kuisioner=".$data_kuisioner['id_kuisioner'])->result();
+			// $get_kuisioner = $this->db->query("SELECT `pertanyaan`.`id_kuisioner`, `pertanyaan`.`id_pertanyaan`, `pertanyaan`.`pertanyaan`, 1 as `status` FROM `pertanyaan` JOIN `jawaban` WHERE `jawaban`.`id_pertanyaan`=`pertanyaan`.`id_pertanyaan` AND `pertanyaan`.id_kuisioner=".$data_kuisioner['id_kuisioner']."
+			// 	UNION
+			// 	SELECT `pertanyaan`.`id_kuisioner`, `pertanyaan`.`id_pertanyaan`, `pertanyaan`.`pertanyaan`, 0 as `status` FROM `pertanyaan` JOIN `jawaban` WHERE `jawaban`.`id_pertanyaan`!=`pertanyaan`.`id_pertanyaan` AND `pertanyaan`.id_kuisioner=".$data_kuisioner['id_kuisioner'])->result();
+			// $this->response(array("status"=>"success","result" => $get_kuisioner));
+
+
+			// Cek ada username & id_kuisioner
+			// if empty generate 0 value
+			// outside if select id_kuisioner, id_pertanyaan, peratnyaan, status, from pertanyaan join jawaban where id_kuisioner dan username
+			$get_jawaban_baseid = $this->db->query("SELECT p.`id_pertanyaan`, p.`username`, p.`jawaban`, p.`status` FROM jawaban as p JOIN pertanyaan WHERE pertanyaan.`id_pertanyaan`=p.`id_pertanyaan` AND p.username='".$data_kuisioner['username']."' AND pertanyaan.id_kuisioner='".$data_kuisioner['id_kuisioner']."'")->result();
+			if(empty($get_jawaban_baseid)){
+				$query = $this->db->query("SELECT * FROM pertanyaan as p WHERE p.id_kuisioner=".$data_kuisioner['id_kuisioner']);
+				foreach ($query->result() as $row)
+				{
+					$this->db->query("INSERT INTO `jawaban` (`id_pertanyaan`, `jawaban`, `username`, `status`) VALUES ('".$row->id_pertanyaan."', '', '".$data_kuisioner['username']."', 0)");
+				}
+			}
+			$get_kuisioner = $this->db->query("SELECT `pertanyaan`.`id_kuisioner`, `pertanyaan`.`id_pertanyaan`, `pertanyaan`.`pertanyaan`, `jawaban`.`status` FROM `pertanyaan` JOIN `jawaban` WHERE `jawaban`.`id_pertanyaan`=`pertanyaan`.`id_pertanyaan` AND `pertanyaan`.id_kuisioner=".$data_kuisioner['id_kuisioner']." AND `jawaban`.`username`='".$data_kuisioner['username']."'")->result();
 			$this->response(array("status"=>"success","result" => $get_kuisioner));
 		}
 	}
@@ -70,18 +85,9 @@ class kuisioner extends REST_Controller {
 			$this->response(array('status' => "failed", "message"=>"jawaban harus diisi"));
 		}
 		else{
-			$get_jawaban_baseid = $this->db->query("SELECT * FROM jawaban as p WHERE p.username='".$data_jawaban['username']."' AND id_pertanyaan='".$data_jawaban['id_pertanyaan']."'")->result();
-			if(empty($get_jawaban_baseid)){
-				$insert= $this->db->query("INSERT INTO `jawaban` (`id_pertanyaan`, `jawaban`, `username`) VALUES ('".$data_jawaban['id_pertanyaan']."', '".$data_jawaban['jawaban']."', '".$data_jawaban['username']."')");
-				if ($insert){
-					$this->response(array('status'=>'success','result' => array($data_jawaban),"message"=>$insert));					
-				}
-			}else{
-				//jika photo di kosong atau tidak di update eksekusi query
-				$update= $this->db->query("Update jawaban Set jawaban ='".$data_jawaban['jawaban']."' Where id_pertanyaan ='".$data_jawaban['id_pertanyaan']."' AND username ='".$data_jawaban['username']."'");
-				if ($update){
-					$this->response(array('status'=>'success','result' => array($data_jawaban),"message"=>$update));
-				}
+			$update= $this->db->query("Update jawaban Set jawaban ='".$data_jawaban['jawaban']."', status = 1 Where id_pertanyaan ='".$data_jawaban['id_pertanyaan']."' AND username ='".$data_jawaban['username']."'");
+			if ($update){
+				$this->response(array('status'=>'success','result' => array($data_jawaban),"message"=>$update));
 			}
 		}
 	}
